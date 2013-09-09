@@ -5,6 +5,9 @@ set(LLVM_LINK_COMPONENTS
   support
   mc
   )
+set(LLVM_LDFLAGS
+   "${LLVM_LDFLAGS} -lsqlite3"
+   )
 
 ADD_DEFINITIONS("-std=c++11")
 set(CMAKE_CXX_FLAGS
@@ -14,6 +17,7 @@ set(CMAKE_CXX_FLAGS
 add_clang_executable(clang-scope
     ClangScope.cpp
     Indexer.cpp
+    CrossReference.cpp
   )
 
 target_link_libraries(clang-scope
