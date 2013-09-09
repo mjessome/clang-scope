@@ -54,8 +54,10 @@ public:
     if (clang::VarDecl *v = clang::dyn_cast<clang::VarDecl>(d)) {
       if (v->isLocalVarDecl())
         return true;
-    } else if (clang::isa<clang::ParmVarDecl>(d))
-      return true;
+      else if (clang::isa<clang::ParmVarDecl>(d))
+        return true;
+    }
+    LOG(3, "DeclRefExpr: " << d->getNameAsString() << std::endl);
     // Add reference
     return true;
   }
