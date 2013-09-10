@@ -12,6 +12,8 @@
 #include <string>
 
 class Indexer {
+  friend class IndexASTAction;
+
 private:
   std::string CompilationDbPath;
   clang::tooling::CompilationDatabase *CompilationDb;

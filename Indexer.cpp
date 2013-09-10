@@ -73,10 +73,20 @@ public:
   }
 };
 
+// FIXME: Don't want to have to grab this global Index pointer.
+extern Indexer *Index;
 class IndexASTAction : public clang::ASTFrontendAction {
 public:
   virtual clang::ASTConsumer *CreateASTConsumer(clang::CompilerInstance &CI,
                                                 llvm::StringRef InFile) {
+    std::string FileName = InFile.str();
+    if (Index->CrossRef.SeenFile(FileName))
+      return 0;
+    std::string CmdLine; // The constructed commandline from the compilationdb
+    for (auto C : Index->CompilationDb->getCompileCommands(FileName))
+      for (auto S : C.CommandLine)
+        CmdLine += S + " ";
+    Index->CrossRef.StartNewFile(FileName, CmdLine);
     return new IndexASTConsumer(CI);
   }
 };

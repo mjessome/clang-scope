@@ -3,6 +3,20 @@
 #include "ClangScope.h"
 #include "CrossReference.h"
 
+unsigned CrossReference::AddFile(std::string FileName, std::string CmdLine) {
+  return (FileIndex[FileName] = InsertFile(FileName, CmdLine));
+}
+
+void CrossReference::StartNewFile(std::string FileName, std::string CmdLine) {
+  if ((TUCount % 20) == 0) { // Transaction every 20th file
+    if (CurrentFile)
+      EndTransaction();
+    BeginTransaction();
+  }
+  ++TUCount;
+  CurrentFile = AddFile(FileName, CmdLine);
+}
+
 static const std::string SQLCreateDB(
     "CREATE TABLE IF NOT EXISTS files( "
     " id INTEGER, "
@@ -47,7 +61,7 @@ bool CrossReference::PrepareStatement(std::string Stmt, sqlite3_stmt **ppstmt) {
 
 bool CrossReference::PrepareInsertStatements() {
   int rc = 0;
-  rc |= PrepareStatement("INSERT INTO declarations VALUES (NULL, ?, ?);",
+  rc |= PrepareStatement("INSERT INTO declarations VALUES (NULL, ?, ?, ?);",
                          &InsDecl);
   rc |= PrepareStatement(
       "INSERT INTO _references VALUES (NULL, ?, ?, ?, ?, ?, ?);", &InsRef);
@@ -70,11 +84,11 @@ bool CrossReference::PrepareQueryStatements() {
   return rc;
 }
 
-bool CrossReference::OpenDb(std::string FileName, bool create) {
+bool CrossReference::OpenDatabase(bool create) {
   int flags = SQLITE_OPEN_READWRITE;
   if (create)
     flags |= SQLITE_OPEN_CREATE;
-  int rc = sqlite3_open_v2(FileName.c_str(), &Db, flags, NULL);
+  int rc = sqlite3_open_v2(DbFileName.c_str(), &Db, flags, NULL);
   if (rc != SQLITE_OK) {
     std::cerr << sqlite3_errmsg(Db);
     sqlite3_close(Db);
@@ -91,11 +105,10 @@ bool CrossReference::OpenDb(std::string FileName, bool create) {
        "PRAGMA journal_mode = MEMORY;" // Journal in memory
        "PRAGMA synchronous = OFF;" // Don't wait for disk to sync on file write
        );
-  this->FileName = FileName;
   return true;
 }
 
-void CrossReference::CloseDb() {
+void CrossReference::CloseDatabase() {
   EndTransaction();
   sqlite3_close(Db);
 }
@@ -150,4 +163,24 @@ unsigned CrossReference::InsertFile(std::string File, std::string CmdLine) {
   rc |= sqlite3_bind_text(InsFile, 1, File.c_str(), File.length(), 0);
   rc |= sqlite3_bind_text(InsFile, 2, CmdLine.c_str(), CmdLine.length(), 0);
   return (rc != SQLITE_OK) ? 0 : StepAndReset(InsFile);
+}
+
+void CrossReference::ListReferences(std::string QualifiedName,
+                                    ReferenceType RefType,
+                                    IdentifierType IdType) {
+  int rc = 0;
+  rc |= sqlite3_bind_int(GetByRefType, 1, RefType);
+  rc |= sqlite3_bind_text(GetByRefType, 2, QualifiedName.c_str(),
+                          QualifiedName.length(), 0);
+  rc |= sqlite3_bind_int(GetByRefType, 3, IdType);
+  for (;;) {
+    rc = sqlite3_step(GetByRefType);
+    if (rc != SQLITE_ROW) break;
+    const unsigned char *File = sqlite3_column_text(GetByRefType, 0);
+    unsigned Line = sqlite3_column_int(GetByRefType, 1);
+    unsigned Col = sqlite3_column_int(GetByRefType, 2);
+    const unsigned char *Text = sqlite3_column_text(GetByRefType, 3);
+    std::cout << File << ":" << Line << ":" << Col << " " << Text << std::endl;
+  }
+  sqlite3_reset(GetByRefType);
 }
