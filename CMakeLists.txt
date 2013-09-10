@@ -23,6 +23,7 @@ add_clang_executable(clang-scope
 target_link_libraries(clang-scope
   clangTooling
   clangBasic
+  clangIndex
   )
 
 install(TARGETS clang-scope

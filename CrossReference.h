@@ -1,4 +1,5 @@
 #pragma once
+#include "clang/Basic/SourceLocation.h"
 
 #include <sqlite3.h>
 #include <string>
@@ -13,25 +14,30 @@ public:
     if (!OpenDatabase())
       abort();
   }
-  ~CrossReference() {}
+  ~CrossReference() {
+    if (DatabaseIsOpen())
+      CloseDatabase();
+  }
 
 private:
   unsigned TUCount;     // How many translation units have been processed.
   unsigned CurrentFile; // Index of the currently processing file.
-
   // Map filenames to their index in the files table.
   std::unordered_map<std::string, unsigned> FileIndex;
-
   // Adds the file to the database, and returns its index.
   unsigned AddFile(std::string FileName, std::string CmdLine = "");
 
 public:
+  // Adds the given file to the FileIndex, handles transactions, and sets
+  // CurrentFile.
   void StartNewFile(std::string FileName, std::string CmdLine);
-
   // Returns true if this file has been processed already.
   bool SeenFile(std::string FileName) {
     return (FileIndex.find(FileName) != FileIndex.end());
   }
+
+  bool AddReference(clang::Decl *d, ReferenceType RefType,
+                    IdentifierType IdType, clang::SourceLocation Loc);
 
 private:
   std::string DbFileName;

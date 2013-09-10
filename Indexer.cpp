@@ -5,7 +5,6 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/AST/RecursiveASTVisitor.h"
-#include "clang/Index/USRGeneration.h"
 
 #include <iostream>
 #include <vector>
@@ -17,6 +16,8 @@
 using namespace clang::tooling;
 
 extern llvm::cl::opt<unsigned> LogLevel;
+// FIXME: Don't want to have to grab this global Index pointer.
+extern Indexer *Index;
 
 struct IndexASTVisitor : clang::RecursiveASTVisitor<IndexASTVisitor> {
 public:
@@ -26,7 +27,7 @@ public:
     if (d->isLocalVarDecl() || clang::isa<clang::ParmVarDecl>(d))
       return true; // Only want global decls
     LOG(3, "VarDecl: " << d->getNameAsString() << std::endl);
-    // Add reference
+    Index->CrossRef.AddReference(d, Declaration, Variable, d->getLocation());
     return true;
   }
   bool VisitFunctionDecl(clang::FunctionDecl *d) {
@@ -73,8 +74,6 @@ public:
   }
 };
 
-// FIXME: Don't want to have to grab this global Index pointer.
-extern Indexer *Index;
 class IndexASTAction : public clang::ASTFrontendAction {
 public:
   virtual clang::ASTConsumer *CreateASTConsumer(clang::CompilerInstance &CI,

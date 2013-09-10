@@ -1,3 +1,6 @@
+#include "clang/Index/USRGeneration.h"
+#include "llvm/ADT/SmallVector.h"
+
 #include <iostream>
 
 #include "ClangScope.h"
@@ -15,6 +18,23 @@ void CrossReference::StartNewFile(std::string FileName, std::string CmdLine) {
   }
   ++TUCount;
   CurrentFile = AddFile(FileName, CmdLine);
+}
+
+bool CrossReference::AddReference(clang::Decl *d, ReferenceType RefType,
+                                  IdentifierType IdType,
+                                  clang::SourceLocation Loc) {
+  // Generate USR
+  std::string USR;
+  {
+    llvm::SmallVector<char, 32> Buf;
+    if (clang::index::generateUSRForDecl(d, Buf))
+      // TODO: Verbose debug output.
+      return false;
+    for (auto c : Buf)
+      USR += c;
+  }
+
+  return true;
 }
 
 static const std::string SQLCreateDB(
@@ -111,6 +131,7 @@ bool CrossReference::OpenDatabase(bool create) {
 void CrossReference::CloseDatabase() {
   EndTransaction();
   sqlite3_close(Db);
+  Db = NULL;
 }
 
 bool CrossReference::Exec(std::string ExecStr) {

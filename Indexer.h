@@ -13,6 +13,7 @@
 
 class Indexer {
   friend class IndexASTAction;
+  friend struct IndexASTVisitor;
 
 private:
   std::string CompilationDbPath;
