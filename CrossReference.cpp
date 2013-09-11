@@ -1,4 +1,5 @@
 #include "clang/Index/USRGeneration.h"
+#include "clang/AST/ASTContext.h"
 #include "llvm/ADT/SmallVector.h"
 
 #include <iostream>
@@ -20,14 +21,33 @@ void CrossReference::StartNewFile(std::string FileName, std::string CmdLine) {
   CurrentFile = AddFile(FileName, CmdLine);
 }
 
-bool CrossReference::AddReference(clang::Decl *d, ReferenceType RefType,
-                                  IdentifierType IdType,
-                                  clang::SourceLocation Loc) {
+bool CrossReference::AddReference(clang::NamedDecl *D, ReferenceType RefType,
+                                  IdentifierType IdType) {
+  AddReference(D, 0, RefType, IdType);
+}
+
+bool AddReference(clang::NamedDecl *D, clang::DeclRefExpr *E,
+                  ReferenceType RefType, IdentifierType IdType) {
+  if (!D->getDeclName().isIdentifier() || !D->getLocation().isValid() ||
+      D->getName().empty()) {
+    // TODO: Verbose debug output.
+    return false;
+  }
+
+  clang::SourceLocation DeclLoc = D->getLocation();
+
+  // Don't record standard library usage
+  if (SrcMgr->isInSystemHeader(DeclLoc) ||
+      SrcMgr->isInExternCSystemHeader(DeclLoc))
+    return false;
+
+  std::string QName = D->getQualifiedNameAsString();
+
   // Generate USR
   std::string USR;
   {
     llvm::SmallVector<char, 32> Buf;
-    if (clang::index::generateUSRForDecl(d, Buf))
+    if (clang::index::generateUSRForDecl(D, Buf))
       // TODO: Verbose debug output.
       return false;
     for (auto c : Buf)

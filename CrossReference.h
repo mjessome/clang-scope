@@ -36,8 +36,11 @@ public:
     return (FileIndex.find(FileName) != FileIndex.end());
   }
 
-  bool AddReference(clang::Decl *d, ReferenceType RefType,
-                    IdentifierType IdType, clang::SourceLocation Loc);
+  bool AddReference(clang::NamedDecl *d, ReferenceType RefType,
+                    IdentifierType IdType);
+
+  bool AddReference(clang::NamedDecl *d, clang::DeclRefExpr *e,
+                    ReferenceType RefType, IdentifierType IdType);
 
 private:
   std::string DbFileName;

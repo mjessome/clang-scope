@@ -19,6 +19,26 @@ extern llvm::cl::opt<unsigned> LogLevel;
 // FIXME: Don't want to have to grab this global Index pointer.
 extern Indexer *Index;
 
+IdentifierType GetIdentifierForDecl(clang::NamedDecl *d) {
+  if (clang::isa<clang::VarDecl>(d))
+    return Variable;
+  if (clang::isa<clang::FunctionDecl>(d))
+    return Function;
+  if (clang::isa<clang::NamespaceDecl>(d))
+    return Namespace;
+  if (clang::isa<clang::TypeDecl>(d))
+    return Type;
+  if (clang::isa<clang::TypedefDecl>(d))
+    return Typedef;
+  if (clang::isa<clang::EnumConstantDecl>(d))
+    return Enum;
+  return IdentifierType_Max;
+}
+
+template <typename T> static ReferenceType DeclarationOrDefinition(T *d) {
+  return (d->isThisDeclarationADefinition()) ? Definition : Declaration;
+}
+
 struct IndexASTVisitor : clang::RecursiveASTVisitor<IndexASTVisitor> {
 public:
   IndexASTVisitor() {}
@@ -27,27 +47,31 @@ public:
     if (d->isLocalVarDecl() || clang::isa<clang::ParmVarDecl>(d))
       return true; // Only want global decls
     LOG(3, "VarDecl: " << d->getNameAsString() << std::endl);
-    Index->CrossRef.AddReference(d, Declaration, Variable, d->getLocation());
+    Index->CrossRef.AddReference(d, DeclarationOrDefinition(d), Variable);
     return true;
   }
   bool VisitFunctionDecl(clang::FunctionDecl *d) {
     LOG(3, "FunctionDecl: " << d->getNameAsString() << std::endl);
     // Add reference
+    Index->CrossRef.AddReference(d, DeclarationOrDefinition(d), Function);
     return true;
   }
   bool VisitNamespaceDecl(clang::NamespaceDecl *d) {
     LOG(3, "NamespaceDecl: " << d->getNameAsString() << std::endl);
     // Add reference
+    Index->CrossRef.AddReference(d, Declaration, Namespace);
     return true;
   }
   bool VisitTagDecl(clang::TagDecl *d) {
     LOG(3, "TagDecl: " << d->getNameAsString() << std::endl);
     // Add reference
+    Index->CrossRef.AddReference(d, DeclarationOrDefinition(d), Typedef);
     return true;
   }
   bool VisitEnumConstantDecl(clang::EnumConstantDecl *d) {
     LOG(3, "EnumConstantDecl: " << d->getNameAsString() << std::endl);
     // Add reference
+    Index->CrossRef.AddReference(d, Definition, Enum);
     return true;
   }
   bool VisitDeclRefExpr(clang::DeclRefExpr *e) {
@@ -59,7 +83,10 @@ public:
         return true;
     }
     LOG(3, "DeclRefExpr: " << d->getNameAsString() << std::endl);
-    // Add reference
+    IdentifierType Id = GetIdentifierForDecl(d);
+    if (Id == IdentifierType_Max)
+      return true;
+    Index->CrossRef.AddReference(d, e, Use, Id);
     return true;
   }
 };
