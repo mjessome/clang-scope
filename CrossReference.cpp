@@ -161,7 +161,8 @@ CrossReference::InsertDeclaration(std::string Name, std::string USR,
                                   IdentifierType IdType) {
   int rc = 0;
   rc |= sqlite3_bind_text(InsDecl, 1, Name.c_str(), Name.length(), 0);
-  rc |= sqlite3_bind_int(InsDecl, 2, IdType);
+  rc |= sqlite3_bind_text(InsDecl, 2, USR.c_str(), USR.length(), 0);
+  rc |= sqlite3_bind_int(InsDecl, 3, IdType);
   if (rc != SQLITE_OK) return 0;
   return (rc != SQLITE_OK) ? 0 : StepAndReset(InsDecl);
 }
