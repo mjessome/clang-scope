@@ -14,6 +14,7 @@
 class Indexer {
   friend class IndexASTAction;
   friend struct IndexASTVisitor;
+  friend class IndexASTConsumer;
 
 private:
   std::string CompilationDbPath;

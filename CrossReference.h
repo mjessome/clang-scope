@@ -1,5 +1,6 @@
 #pragma once
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/SourceManager.h"
 
 #include <sqlite3.h>
 #include <string>
@@ -10,7 +11,7 @@
 class CrossReference {
 public:
   CrossReference(std::string DbFileName)
-      : TUCount(0), CurrentFile(0), DbFileName(DbFileName), Transaction(true) {
+      : TUCount(0), CurrentFile(0), DbFileName(DbFileName), Transaction(false) {
     if (!OpenDatabase())
       abort();
   }
@@ -20,22 +21,42 @@ public:
   }
 
 private:
+  clang::SourceManager *SrcMgr; // Current SourceManager
+
+public:
+  void SetSourceManager(clang::SourceManager *SM) { SrcMgr = SM; }
+
+private:
   unsigned TUCount;     // How many translation units have been processed.
   unsigned CurrentFile; // Index of the currently processing file.
   // Map filenames to their index in the files table.
   std::unordered_map<std::string, unsigned> FileIndex;
+
   // Adds the file to the database, and returns its index.
   unsigned AddFile(std::string FileName, std::string CmdLine = "");
+
+  unsigned GetFileIndex(std::string Name) {
+    auto II = FileIndex.find(Name);
+    if (II == FileIndex.end())
+      return AddFile(Name);
+    return II->second;
+  }
 
 public:
   // Adds the given file to the FileIndex, handles transactions, and sets
   // CurrentFile.
   void StartNewFile(std::string FileName, std::string CmdLine);
+
   // Returns true if this file has been processed already.
   bool SeenFile(std::string FileName) {
     return (FileIndex.find(FileName) != FileIndex.end());
   }
 
+private:
+  // Map USRs to their index in the declarations table.
+  std::unordered_map<std::string, unsigned> DeclarationIndex;
+
+public:
   bool AddReference(clang::NamedDecl *d, ReferenceType RefType,
                     IdentifierType IdType);
 

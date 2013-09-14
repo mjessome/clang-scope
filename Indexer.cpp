@@ -97,6 +97,7 @@ public:
   virtual void Initialize(clang::ASTContext &Ctx) {}
   virtual void HandleTranslationUnit(clang::ASTContext &Ctx) {
     IndexASTVisitor v;
+    Index->CrossRef.SetSourceManager(&Ctx.getSourceManager());
     v.TraverseDecl(Ctx.getTranslationUnitDecl());
   }
 };

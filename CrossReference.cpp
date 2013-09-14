@@ -2,19 +2,31 @@
 #include "clang/AST/ASTContext.h"
 #include "llvm/ADT/SmallVector.h"
 
+#include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/SourceManager.h"
+#include "clang/AST/Expr.h"
+
 #include <iostream>
+#include <sstream>
+#include "clang/Frontend/FrontendActions.h"
 
 #include "ClangScope.h"
 #include "CrossReference.h"
+
+extern llvm::cl::opt<unsigned> LogLevel;
 
 unsigned CrossReference::AddFile(std::string FileName, std::string CmdLine) {
   return (FileIndex[FileName] = InsertFile(FileName, CmdLine));
 }
 
 void CrossReference::StartNewFile(std::string FileName, std::string CmdLine) {
-  if ((TUCount % 20) == 0) { // Transaction every 20th file
-    if (CurrentFile)
+  LOG(1, "New File: " << Filendme << std::endl);
+  if ((TUCount % 5) == 0) { // Transaction every 5th file
+    if (CurrentFile) {
       EndTransaction();
+      LOG(2, "End SQL Transaction.\n");
+    }
+    LOG(2, "Begin SQL Transaction.\n");
     BeginTransaction();
   }
   ++TUCount;
@@ -23,22 +35,21 @@ void CrossReference::StartNewFile(std::string FileName, std::string CmdLine) {
 
 bool CrossReference::AddReference(clang::NamedDecl *D, ReferenceType RefType,
                                   IdentifierType IdType) {
-  AddReference(D, 0, RefType, IdType);
+  return AddReference(D, 0, RefType, IdType);
 }
 
-bool AddReference(clang::NamedDecl *D, clang::DeclRefExpr *E,
-                  ReferenceType RefType, IdentifierType IdType) {
+bool CrossReference::AddReference(clang::NamedDecl *D, clang::DeclRefExpr *E,
+                                  ReferenceType RefType, IdentifierType IdType) {
   if (!D->getDeclName().isIdentifier() || !D->getLocation().isValid() ||
       D->getName().empty()) {
     // TODO: Verbose debug output.
     return false;
   }
 
-  clang::SourceLocation DeclLoc = D->getLocation();
+  clang::SourceLocation Loc = D->getLocation();
 
   // Don't record standard library usage
-  if (SrcMgr->isInSystemHeader(DeclLoc) ||
-      SrcMgr->isInExternCSystemHeader(DeclLoc))
+  if (SrcMgr->isInSystemHeader(Loc) || SrcMgr->isInExternCSystemHeader(Loc))
     return false;
 
   std::string QName = D->getQualifiedNameAsString();
@@ -54,7 +65,35 @@ bool AddReference(clang::NamedDecl *D, clang::DeclRefExpr *E,
       USR += c;
   }
 
-  return true;
+  // If this is a usage, want to use that location rather than the decl.
+  if (E) Loc = E->getLocation();
+
+  // Can't use current file's name as this may be in a header.
+  std::string FileName;
+  unsigned Line, Col;
+  {
+    std::string LocStr(Loc.printToString(*SrcMgr));
+    std::stringstream SS(LocStr);
+    std::string FileName;
+    std::getline(SS, FileName, ':');
+
+    SS >> Line;
+    SS.ignore(std::numeric_limits<std::streamsize>::max(), ':');
+    SS >> Col;
+  }
+
+  // Check if we already have this declaration in the declarations table.
+  unsigned Declaration = 0;
+  if (!DeclarationIndex.count(USR))
+    DeclarationIndex[USR] = InsertDeclaration(QName, USR, IdType);
+  else
+    Declaration = DeclarationIndex[USR];
+  unsigned File = GetFileIndex(FileName);
+
+  // TODO: Get spelling of this reference.
+  std::string Text;
+
+  return InsertReference(Declaration, RefType, File, Line, Col, Text);
 }
 
 static const std::string SQLCreateDB(
