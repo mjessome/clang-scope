@@ -28,5 +28,5 @@ public:
   Indexer(std::string Path, CrossReference &CrossRef);
   ~Indexer();
 
-  bool Index();
+  bool Run();
 };

@@ -23,6 +23,6 @@ int main(int argc, const char *argv[]) {
   }
   CrossReference CrossRef("clscope.db");
   Index = new Indexer(Path, CrossRef);
-  Index->Index();
+  Index->Run();
   return 0;
 }

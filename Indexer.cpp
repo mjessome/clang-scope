@@ -138,7 +138,7 @@ bool Indexer::OpenCompilationDatabase() {
   return true;
 }
 
-bool Indexer::Index() {
+bool Indexer::Run() {
   if (!OpenCompilationDatabase()) return false;
 
   ClangTool Tool(*CompilationDb, Files);

@@ -20,7 +20,7 @@ unsigned CrossReference::AddFile(std::string FileName, std::string CmdLine) {
 }
 
 void CrossReference::StartNewFile(std::string FileName, std::string CmdLine) {
-  LOG(1, "New File: " << Filendme << std::endl);
+  LOG(1, "New File: " << FileName << std::endl);
   if ((TUCount % 5) == 0) { // Transaction every 5th file
     if (CurrentFile) {
       EndTransaction();
