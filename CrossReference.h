@@ -105,6 +105,7 @@ private:
 
   unsigned InsertFile(std::string File, std::string CmdLine);
 
+public:
   void ListReferences(std::string QualifiedName, ReferenceType RefType,
                       IdentifierType IdType);
 };
