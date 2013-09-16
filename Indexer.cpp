@@ -74,6 +74,21 @@ public:
     Index->CrossRef.AddReference(d, Definition, Enum);
     return true;
   }
+  bool VisitMemberExpr(clang::MemberExpr *e) {
+    clang::NamedDecl *d = e->getFoundDecl().getDecl();
+    if (clang::VarDecl *v = clang::dyn_cast<clang::VarDecl>(d)) {
+      if (v->isLocalVarDecl())
+        return true;
+      else if (clang::isa<clang::ParmVarDecl>(d))
+        return true;
+    }
+    IdentifierType Id = GetIdentifierForDecl(d);
+    if (Id == IdentifierType_Max)
+      return true;
+    LOG(3, "MemberRefExpr: " << d->getNameAsString() << std::endl);
+    Index->CrossRef.AddReference(d, e, Use, Id);
+    return true;
+  }
   bool VisitDeclRefExpr(clang::DeclRefExpr *e) {
     clang::NamedDecl *d = e->getDecl();
     if (clang::VarDecl *v = clang::dyn_cast<clang::VarDecl>(d)) {
@@ -82,10 +97,10 @@ public:
       else if (clang::isa<clang::ParmVarDecl>(d))
         return true;
     }
-    LOG(3, "DeclRefExpr: " << d->getNameAsString() << std::endl);
     IdentifierType Id = GetIdentifierForDecl(d);
     if (Id == IdentifierType_Max)
       return true;
+    LOG(3, "DeclRefExpr: " << d->getNameAsString() << std::endl);
     Index->CrossRef.AddReference(d, e, Use, Id);
     return true;
   }

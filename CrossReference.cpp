@@ -35,7 +35,7 @@ bool CrossReference::AddReference(clang::NamedDecl *D, ReferenceType RefType,
   return AddReference(D, 0, RefType, IdType);
 }
 
-bool CrossReference::AddReference(clang::NamedDecl *D, clang::DeclRefExpr *E,
+bool CrossReference::AddReference(clang::NamedDecl *D, clang::Expr *E,
                                   ReferenceType RefType, IdentifierType IdType) {
   if (!D->getDeclName().isIdentifier() || !D->getLocation().isValid() ||
       D->getName().empty()) {
@@ -63,7 +63,7 @@ bool CrossReference::AddReference(clang::NamedDecl *D, clang::DeclRefExpr *E,
   }
 
   // If this is a usage, want to use that location rather than the decl.
-  if (E) Loc = E->getLocation();
+  if (E) Loc = E->getLocStart();
 
   // Can't use current file's name as this may be in a header.
   std::string FileName;

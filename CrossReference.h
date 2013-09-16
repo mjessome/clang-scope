@@ -60,7 +60,7 @@ public:
   bool AddReference(clang::NamedDecl *d, ReferenceType RefType,
                     IdentifierType IdType);
 
-  bool AddReference(clang::NamedDecl *d, clang::DeclRefExpr *e,
+  bool AddReference(clang::NamedDecl *d, clang::Expr *e,
                     ReferenceType RefType, IdentifierType IdType);
 
 private:
