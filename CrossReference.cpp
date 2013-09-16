@@ -20,13 +20,10 @@ unsigned CrossReference::AddFile(std::string FileName, std::string CmdLine) {
 }
 
 void CrossReference::StartNewFile(std::string FileName, std::string CmdLine) {
-  LOG(1, "New File: " << FileName << std::endl);
   if ((TUCount % 5) == 0) { // Transaction every 5th file
     if (CurrentFile) {
       EndTransaction();
-      LOG(2, "End SQL Transaction.\n");
     }
-    LOG(2, "Begin SQL Transaction.\n");
     BeginTransaction();
   }
   ++TUCount;
@@ -74,7 +71,6 @@ bool CrossReference::AddReference(clang::NamedDecl *D, clang::DeclRefExpr *E,
   {
     std::string LocStr(Loc.printToString(*SrcMgr));
     std::stringstream SS(LocStr);
-    std::string FileName;
     std::getline(SS, FileName, ':');
 
     SS >> Line;
