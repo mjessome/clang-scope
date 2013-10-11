@@ -20,9 +20,9 @@ extern llvm::cl::opt<unsigned> LogLevel;
 extern Indexer *Index;
 
 IdentifierType GetIdentifierForDecl(clang::NamedDecl *d) {
-  if (clang::isa<clang::VarDecl>(d))
+  if (clang::isa<clang::VarDecl>(d) || clang::isa<clang::FieldDecl>(d))
     return Variable;
-  if (clang::isa<clang::FunctionDecl>(d))
+  if (clang::isa<clang::FunctionDecl>(d) || clang::isa<clang::CXXMethodDecl>(d))
     return Function;
   if (clang::isa<clang::NamespaceDecl>(d))
     return Namespace;
@@ -52,25 +52,21 @@ public:
   }
   bool VisitFunctionDecl(clang::FunctionDecl *d) {
     LOG(3, "FunctionDecl: " << d->getNameAsString() << std::endl);
-    // Add reference
     Index->CrossRef.AddReference(d, DeclarationOrDefinition(d), Function);
     return true;
   }
   bool VisitNamespaceDecl(clang::NamespaceDecl *d) {
     LOG(3, "NamespaceDecl: " << d->getNameAsString() << std::endl);
-    // Add reference
     Index->CrossRef.AddReference(d, Declaration, Namespace);
     return true;
   }
   bool VisitTagDecl(clang::TagDecl *d) {
     LOG(3, "TagDecl: " << d->getNameAsString() << std::endl);
-    // Add reference
     Index->CrossRef.AddReference(d, DeclarationOrDefinition(d), Typedef);
     return true;
   }
   bool VisitEnumConstantDecl(clang::EnumConstantDecl *d) {
     LOG(3, "EnumConstantDecl: " << d->getNameAsString() << std::endl);
-    // Add reference
     Index->CrossRef.AddReference(d, Definition, Enum);
     return true;
   }

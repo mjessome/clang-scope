@@ -42,14 +42,16 @@ int main(int argc, const char *argv[]) {
     std::cerr << "Log level must be 0-3";
     return 1;
   }
-  if (!DbFile.length())
+
+  if (!DbFile.length() > 0)
     DbFile = "clscope.db";
+
   CrossReference CrossRef(DbFile);
 
-  if (Query.length()) {
+  if (Query.length() > 0) {
+    if (!IdType.good()) return 1;
     CrossRef.ListReferences(Query, QueryType, IdType);
-  }
-  else {
+  } else {
     // Index
     Index = new Indexer(Path, CrossRef);
     Index->Run();

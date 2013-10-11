@@ -105,6 +105,12 @@ static const std::string SQLCreateDB(
     " name TEXT, "    // Qualified name.
     " usr TEXT,"      // This declaration's USR.
     " type INTEGER, " // IdentifierType.
+                      // 0 - Enum
+                      // 1 - Function
+                      // 2 - Namespace
+                      // 3 - Type
+                      // 4 - Typedef
+                      // 5 - Variable
     " PRIMARY KEY (id) );"
     // References holds all references that refer to a declaration.
     // In the case of a use, file:line:col corresponds to the usage location.
