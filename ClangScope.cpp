@@ -10,7 +10,7 @@ llvm::cl::opt<std::string> Path("p", llvm::cl::desc("Project path"),
                                 llvm::cl::Optional);
 llvm::cl::opt<int> LogLevel("l", llvm::cl::desc("Log level (0-3)"),
                             llvm::cl::Optional);
-llvm::cl::opt<std::string> DbFile("--db", llvm::cl::desc("Database file"),
+llvm::cl::opt<std::string> DbFile("db", llvm::cl::desc("Database file"),
                                           llvm::cl::Optional);
 llvm::cl::opt<ReferenceType> QueryType(llvm::cl::desc("Set the query type:"),
   llvm::cl::values(
@@ -43,13 +43,12 @@ int main(int argc, const char *argv[]) {
     return 1;
   }
 
-  if (!DbFile.length() > 0)
+  if (!DbFile.length())
     DbFile = "clscope.db";
 
   CrossReference CrossRef(DbFile);
 
   if (Query.length() > 0) {
-    if (!IdType.good()) return 1;
     CrossRef.ListReferences(Query, QueryType, IdType);
   } else {
     // Index

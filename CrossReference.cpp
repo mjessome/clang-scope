@@ -21,9 +21,8 @@ unsigned CrossReference::AddFile(std::string FileName, std::string CmdLine) {
 
 void CrossReference::StartNewFile(std::string FileName, std::string CmdLine) {
   if ((TUCount % 5) == 0) { // Transaction every 5th file
-    if (CurrentFile) {
+    if (CurrentFile)
       EndTransaction();
-    }
     BeginTransaction();
   }
   ++TUCount;
@@ -62,8 +61,8 @@ bool CrossReference::AddReference(clang::NamedDecl *D, clang::Expr *E,
       USR += c;
   }
 
-  // If this is a usage, want to use that location rather than the decl.
-  if (E) Loc = E->getLocStart();
+  if (E) // This is a use; use the usage location rather than the decl location.
+    Loc = E->getLocStart();
 
   // Can't use current file's name as this may be in a header.
   std::string FileName;
