@@ -131,7 +131,7 @@ static const std::string SQLCreateDB(
 
 bool CrossReference::PrepareStatement(std::string Stmt, sqlite3_stmt **ppstmt) {
   const char *end = 0;
-  int rc = sqlite3_prepare(Db, Stmt.c_str(), Stmt.size(), ppstmt, &end);
+  int rc = sqlite3_prepare_v2(Db, Stmt.c_str(), Stmt.size(), ppstmt, &end);
   if (rc != SQLITE_OK) {
     std::cerr << "ERROR ON PREPARE: " << rc << std::endl;
     std::cerr << Stmt << std::endl;
@@ -146,21 +146,6 @@ bool CrossReference::PrepareInsertStatements() {
   rc |= PrepareStatement(
       "INSERT INTO _references VALUES (NULL, ?, ?, ?, ?, ?, ?);", &InsRef);
   rc |= PrepareStatement("INSERT INTO files VALUES (NULL, ?, ?);", &InsFile);
-  return rc;
-}
-
-bool CrossReference::PrepareQueryStatements() {
-  int rc = 0;
-  // A query by ReferenceType / name
-  rc |= PrepareStatement("SELECT name,line,col,txt FROM files "
-                         "JOIN ("
-                         "  SELECT file,line,col,txt FROM _references "
-                         "    WHERE ( reftype=? AND declaration IN ("
-                         "      SELECT id "
-                         "      FROM declarations WHERE ( name=? "
-                         "      AND type=? ) LIMIT 1 ) ) ) "
-                         "ON file = id;",
-                         &GetByRefType);
   return rc;
 }
 
@@ -179,7 +164,6 @@ bool CrossReference::OpenDatabase(bool create) {
 
   // TODO: These should be on a config switch
   PrepareInsertStatements();
-  PrepareQueryStatements();
 
   Exec("PRAGMA temp_store = 2;"        // Store temporary data in memory
        "PRAGMA journal_mode = MEMORY;" // Journal in memory
@@ -247,22 +231,53 @@ unsigned CrossReference::InsertFile(std::string File, std::string CmdLine) {
   return (rc != SQLITE_OK) ? 0 : StepAndReset(InsFile);
 }
 
+bool CrossReference::PrepareQueryStatement(bool RefType, bool IdType, sqlite3_stmt **stmt) {
+  std::ostringstream OS;
+
+  OS << "SELECT name,line,col,txt FROM files "
+     << "JOIN ( SELECT file,line,col,txt FROM _references WHERE ( ";
+
+  if (RefType)
+    OS << "reftype=? AND ";
+
+  OS << "declaration IN ( SELECT id FROM declarations WHERE ( name=? ";
+
+  if (IdType)
+    OS << "AND type=? ";
+
+  OS << ") LIMIT 1 ) ) ) ON file = id;";
+
+  return PrepareStatement(OS.str().c_str(), stmt);
+}
+
 void CrossReference::ListReferences(std::string QualifiedName,
                                     ReferenceType RefType,
                                     IdentifierType IdType) {
   int rc = 0;
-  rc |= sqlite3_bind_int(GetByRefType, 1, RefType);
-  rc |= sqlite3_bind_text(GetByRefType, 2, QualifiedName.c_str(),
+  sqlite3_stmt *query;
+
+  bool ByRefType = (RefType != ReferenceType_Any),
+       ByIdType = (IdType != IdentifierType_Any);
+
+  rc |= PrepareQueryStatement(ByRefType, ByIdType, &query);
+
+
+  int index = 1;
+  if (ByRefType)
+    rc |= sqlite3_bind_int(query, index++, RefType);
+  rc |= sqlite3_bind_text(query, index++, QualifiedName.c_str(),
                           QualifiedName.length(), 0);
-  rc |= sqlite3_bind_int(GetByRefType, 3, IdType);
+  if (ByIdType)
+    rc |= sqlite3_bind_int(query, index++, IdType);
+
   for (;;) {
-    rc = sqlite3_step(GetByRefType);
+    rc = sqlite3_step(query);
     if (rc != SQLITE_ROW) break;
-    const unsigned char *File = sqlite3_column_text(GetByRefType, 0);
-    unsigned Line = sqlite3_column_int(GetByRefType, 1);
-    unsigned Col = sqlite3_column_int(GetByRefType, 2);
-    const unsigned char *Text = sqlite3_column_text(GetByRefType, 3);
+    const unsigned char *File = sqlite3_column_text(query, 0);
+    unsigned Line = sqlite3_column_int(query, 1);
+    unsigned Col = sqlite3_column_int(query, 2);
+    const unsigned char *Text = sqlite3_column_text(query, 3);
     std::cout << File << ":" << Line << ":" << Col << " " << Text << std::endl;
   }
-  sqlite3_reset(GetByRefType);
+  sqlite3_finalize(query);
 }

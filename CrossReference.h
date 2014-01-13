@@ -76,10 +76,9 @@ private:
   sqlite3_stmt *InsDecl;
   sqlite3_stmt *InsRef;
   sqlite3_stmt *InsFile;
-  sqlite3_stmt *GetByRefType;
   bool PrepareStatement(std::string Stmt, sqlite3_stmt **ppstmt);
   bool PrepareInsertStatements();
-  bool PrepareQueryStatements();
+  bool PrepareQueryStatement(bool RefType, bool IdType, sqlite3_stmt **stmt);
 
   bool OpenDatabase(bool create = true);
   bool DatabaseIsOpen() { return Db; }

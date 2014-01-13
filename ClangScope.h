@@ -4,7 +4,8 @@
 #define LOG(level, msg) if (LogLevel >= level) std::cout << msg;
 
 enum ReferenceType {
-  Declaration = 0,
+  ReferenceType_Any = 0,
+  Declaration,
   Definition,
   Override,
   Use,
@@ -12,7 +13,8 @@ enum ReferenceType {
 };
 
 enum IdentifierType {
-  Enum = 0,
+  IdentifierType_Any = 0,
+  Enum,
   Function,
   Namespace,
   Type,
