@@ -1,0 +1,8 @@
+* Clean up python query wrapper and release it. (Clean up only)
+* Vim plugin. (Implemented, needs more testing)
+* File dependency tree.
+* Multi-threaded database generation.
+* Database updates, rather than full re-generation on each run.
+* Add each reference's text to database.
+* Override listing.
+* A nice query interface similar to cscope's.

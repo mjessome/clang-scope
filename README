@@ -1,0 +1,65 @@
+Clang-Scope
+===========
+Clang-scope is a cross referencing tool intended to be a semantically aware
+replacement for cscope.
+
+Once a database is generated for a project, users can query for functions,
+classes and their members, global variables, etc. by name.
+
+If the sqlite database is used directly, lookup can also be done by clang USRs.
+This comes in handy for guaranteeing that queries are on a specific identifier,
+rather than loosely basing queries off of its name.
+
+See the TODO file for a prioritized list of to-do items.
+
+Compile Commands Database
+=========================
+Generating a clang-scope database requires a compile_commands.json database.
+This database is generated at compile time, and contains information on how to
+build each file in a project.
+  - If the project uses cmake, this file can be built by passing
+    -DCMAKE_EXPORT_COMPILE_COMMANDS to cmake.
+  - On linux, Bear (https://github.com/rizsotto/Bear) can also be used to
+    intercept compiler calls and create the compilation database.
+For more information see http://clang.llvm.org/docs/JSONCompilationDatabase.html
+
+Usage
+=====
+To generate the database, run clang-scope in a directory that contains the
+compile_commands.json file. This will output a clscope.db file.
+
+Querying is done using the '-q' option. This is to specify a scoped name,
+Queries can be narrowed down with the following options:
+    Specify the reference type to search for (one of):
+        -d    Declaration
+        -D    Definition
+        -o    Override (not yet implemented)
+        -u    Use
+    Specify the identifier type (one of):
+        -e    Enum
+        -f    Function
+        -ns   Namespace
+        -t    Type
+        -td   Typedef
+        -v    Variable
+
+A few example queries on the llvm/clang/clang-scope codebase:
+- Find the definition of llvm::errs():
+    $ clang-scope -q llvm::errs -D -f
+- List all uses of llvm::StringRef::lower():
+    $ clang-scope -q llvm::StringRef::lower -u
+- List all places namespace clang is declared:
+    $ clang-scope -q clang -ns -d
+
+See 'clang-scope -help' for full usage instructions.
+
+Building
+========
+1. Clone clang-tools-extra into clang/tools.
+    git clone http://llvm.org/git/clang-tools-extra.git clang/tools/extra
+2. Clone clang-scope into extra.
+    git clone https://github.com/mjessome/clang-scope clang/tools/extra/clang-scope
+3. Add the following to clang/tools/extra/CMakeLists.txt.
+    add_subdirectory(clang-scope)
+4. Go to your llvm build directory, and re-build.
+5. The binary will be created in the build directory, at bin/clang-scope.
